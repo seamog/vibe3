@@ -135,43 +135,43 @@ export const runSimulation = (
 
         // BUY LOGIC
         if (T < 20) {
-            const buyAmount = oneTimeBuyAmount / 2;
-            const refPrice = state.shares > 0 ? state.avgPrice : day.open;
-            
-            // LOC Buy 1
-            const locBuyPrice1 = refPrice;
-            if (state.cash >= buyAmount && day.close <= locBuyPrice1) {
-                const sharesToBuy = Math.floor(buyAmount / day.close);
-                if (sharesToBuy > 0) {
-                    const cost = sharesToBuy * day.close;
-                    if (state.shares > 0) {
-                        state.avgPrice = (state.avgPrice * state.shares + cost) / (state.shares + sharesToBuy);
-                    } else {
-                        state.avgPrice = day.close;
-                    }
-                    state.shares += sharesToBuy;
-                    state.cash -= cost;
-                    state.cumulativeTransactionValue += cost;
-                    addTransaction(state, day.date, 'BUY', 'LOC', sharesToBuy, day.close, `T=${T}, Target Price: ${locBuyPrice1.toFixed(2)}`);
+            let amountToBuy = 0;
+            let note = '';
+
+            if (state.shares === 0) {
+                // First ever buy. Unconditional with the full amount.
+                amountToBuy = oneTimeBuyAmount;
+                note = 'Initial Purchase';
+            } else {
+                // Subsequent buys when T < 20
+                const refPrice = state.avgPrice;
+                const locBuyPriceDeep = refPrice;
+                const locBuyPriceShallow = refPrice * (1 + SP);
+
+                if (day.close <= locBuyPriceDeep) {
+                    // Deeper dip, use both halves of the budget
+                    amountToBuy = oneTimeBuyAmount;
+                    note = `T=${T}, Deep Dip Buy. Target: <=${locBuyPriceDeep.toFixed(2)}`;
+                } else if (day.close <= locBuyPriceShallow) {
+                    // Shallow dip, use one half of the budget
+                    amountToBuy = oneTimeBuyAmount / 2;
+                    note = `T=${T}, Shallow Dip Buy. Target: <=${locBuyPriceShallow.toFixed(2)}`;
                 }
             }
-            
-            // LOC Buy 2
-            const locBuyPrice2 = refPrice * (1 + SP);
-            if (state.cash >= buyAmount && day.close <= locBuyPrice2) {
-                const sharesToBuy = Math.floor(buyAmount / day.close);
-                if (sharesToBuy > 0) {
-                    const cost = sharesToBuy * day.close;
-                    if (state.shares > 0) {
-                        state.avgPrice = (state.avgPrice * state.shares + cost) / (state.shares + sharesToBuy);
-                    } else {
-                        state.avgPrice = day.close;
-                    }
-                    state.shares += sharesToBuy;
-                    state.cash -= cost;
-                    state.cumulativeTransactionValue += cost;
-                    addTransaction(state, day.date, 'BUY', 'LOC', sharesToBuy, day.close, `T=${T}, Target Price: ${locBuyPrice2.toFixed(2)}`);
-                }
+
+            if (amountToBuy > 0 && state.cash >= amountToBuy) {
+                 const sharesToBuy = Math.floor(amountToBuy / day.close);
+                 if (sharesToBuy > 0) {
+                     const cost = sharesToBuy * day.close;
+                     
+                     const preBuyShares = state.shares;
+                     state.avgPrice = preBuyShares > 0 ? (state.avgPrice * preBuyShares + cost) / (preBuyShares + sharesToBuy) : day.close;
+
+                     state.shares += sharesToBuy;
+                     state.cash -= cost;
+                     state.cumulativeTransactionValue += cost;
+                     addTransaction(state, day.date, 'BUY', 'LOC', sharesToBuy, day.close, note);
+                 }
             }
         } else if (T < 40) { // T is between 20 and 39
             const buyAmount = oneTimeBuyAmount;
