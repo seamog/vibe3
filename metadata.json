@@ -1,0 +1,5 @@
+{
+  "name": "TQQQ Variable Installment Strategy Simulator",
+  "description": "A React application to simulate a variable installment stock purchase and sale strategy for TQQQ using historical data. Users can input their total investment and see a detailed history of transactions based on the specified trading logic.",
+  "requestFramePermissions": []
+}
